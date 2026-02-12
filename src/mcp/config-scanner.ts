@@ -63,7 +63,7 @@ const TOOL_POISONING_PATTERNS: PoisonPattern[] = [
   },
   // Invisible characters
   {
-    pattern: /[\u200b\u200c\u200d\ufeff\u00ad\u2060\u180e\u2062\u2063\u2064]/,
+    pattern: /\u200b|\u200c|\u200d|\ufeff|\u00ad|\u2060|\u180e|\u2062|\u2063|\u2064/,
     severity: 'HIGH',
     description: 'Zero-width/invisible characters detected — may hide instructions',
   },

@@ -158,14 +158,14 @@ export class ToolCallAuditor {
     toolName: string,
     fn: (...args: TArgs) => TReturn,
   ): (...args: TArgs) => TReturn {
-    const auditor = this;
+    const audit = this.audit.bind(this);
     return function (this: unknown, ...args: TArgs): TReturn {
       const argsObj: Record<string, unknown> = {};
       for (let i = 0; i < args.length; i++) {
         argsObj[`arg${i}`] = args[i];
       }
 
-      const result = auditor.audit(toolName, argsObj);
+      const result = audit(toolName, argsObj);
       if (result.blocked) {
         throw new Error(
           `AgentShield: Tool "${toolName}" blocked — ${result.risk} risk (${result.findings.length} findings)`,

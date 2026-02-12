@@ -180,7 +180,7 @@ program
           lines.push(`\x1b[1m  Findings\x1b[0m`);
           for (const f of report.findings) {
             const srv = f.toolName ? `${f.serverName}/${f.toolName}` : f.serverName;
-            lines.push(`  ${riskColor(f.severity as any)}[${f.severity}]\x1b[0m ${f.description}`);
+            lines.push(`  ${riskColor(f.severity)}[${f.severity}]\x1b[0m ${f.description}`);
             lines.push(`\x1b[2m    ${srv} → ${f.field}: ${f.matchedText}\x1b[0m`);
           }
         } else {
@@ -256,7 +256,7 @@ program
         if (report.findings.length > 0) {
           lines.push(`\x1b[1m  Findings\x1b[0m`);
           for (const f of report.findings) {
-            lines.push(`  ${riskColor(f.severity as any)}[${f.severity}]\x1b[0m ${f.description}`);
+            lines.push(`  ${riskColor(f.severity)}[${f.severity}]\x1b[0m ${f.description}`);
             lines.push(`\x1b[2m    ${f.source} → ${f.field}: ${f.matchedText}\x1b[0m`);
           }
         } else {

@@ -6,7 +6,7 @@ import {
   Severity,
   RiskLevel,
 } from '../types/index.js';
-import { ALL_PATTERNS, detectMaliciousUris, isSuspiciousUrl, URL_PATTERN, deepBase64Scan } from '../analysis/patterns.js';
+import { ALL_PATTERNS, detectMaliciousUris, isSuspiciousUrl, deepBase64Scan } from '../analysis/patterns.js';
 
 // ─── Manifest file names to scan ─────────────────────────────────
 
@@ -220,7 +220,7 @@ export class SupplyChainScanner {
     }
 
     // Check for invisible characters
-    const invisible = text.match(/[\u200b\u200c\u200d\ufeff\u00ad\u2060\u180e]/);
+    const invisible = text.match(/\u200b|\u200c|\u200d|\ufeff|\u00ad|\u2060|\u180e/);
     if (invisible) {
       findings.push({
         source,

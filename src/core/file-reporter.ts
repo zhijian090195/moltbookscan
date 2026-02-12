@@ -13,13 +13,6 @@ const RISK_COLOR: Record<RiskLevel, string> = {
   SAFE: '\x1b[32m',
 };
 
-const RISK_LABEL: Record<RiskLevel, string> = {
-  HIGH: '\u274c HIGH',
-  MEDIUM: '\u26a0\ufe0f  MEDIUM',
-  LOW: '\u2139\ufe0f  LOW',
-  SAFE: '\u2705 SAFE',
-};
-
 // ─── CLI Report ─────────────────────────────────────────────────
 
 export function formatFileCLIReport(report: FileScanReport, verbose = false): string {
