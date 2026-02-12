@@ -1,0 +1,130 @@
+name: 'AgentShield Scan'
+description: 'Scan files for prompt injection, credential theft, and agent threats'
+branding:
+  icon: 'shield'
+  color: 'blue'
+
+inputs:
+  path:
+    description: 'Path to scan (file or directory)'
+    required: false
+    default: '.'
+  severity:
+    description: 'Minimum severity to fail the check (HIGH, MEDIUM, LOW)'
+    required: false
+    default: 'HIGH'
+
+outputs:
+  risk-level:
+    description: 'Overall risk level (HIGH, MEDIUM, LOW, SAFE)'
+    value: ${{ steps.scan.outputs.risk_level }}
+  findings-count:
+    description: 'Total number of findings'
+    value: ${{ steps.scan.outputs.findings_count }}
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+
+    - name: Install AgentShield
+      shell: bash
+      run: npm install -g moltbot-scan
+
+    - name: Run scan
+      id: scan
+      shell: bash
+      run: |
+        set +e
+        REPORT=$(agentshield scan-files "${{ inputs.path }}" --output json)
+        EXIT_CODE=$?
+        set -e
+
+        # Parse JSON report
+        FINDINGS_COUNT=$(echo "$REPORT" | node -e "const d=JSON.parse(require('fs').readFileSync('/dev/stdin','utf8')); console.log(d.findings.length)")
+        HIGH_COUNT=$(echo "$REPORT" | node -e "const d=JSON.parse(require('fs').readFileSync('/dev/stdin','utf8')); console.log(d.summary.high)")
+        MEDIUM_COUNT=$(echo "$REPORT" | node -e "const d=JSON.parse(require('fs').readFileSync('/dev/stdin','utf8')); console.log(d.summary.medium)")
+        LOW_COUNT=$(echo "$REPORT" | node -e "const d=JSON.parse(require('fs').readFileSync('/dev/stdin','utf8')); console.log(d.summary.low)")
+        SAFE_COUNT=$(echo "$REPORT" | node -e "const d=JSON.parse(require('fs').readFileSync('/dev/stdin','utf8')); console.log(d.summary.safe)")
+        SCANNED=$(echo "$REPORT" | node -e "const d=JSON.parse(require('fs').readFileSync('/dev/stdin','utf8')); console.log(d.scannedFiles)")
+
+        # Determine overall risk level
+        if [ "$HIGH_COUNT" -gt 0 ]; then
+          RISK_LEVEL="HIGH"
+        elif [ "$MEDIUM_COUNT" -gt 0 ]; then
+          RISK_LEVEL="MEDIUM"
+        elif [ "$LOW_COUNT" -gt 0 ]; then
+          RISK_LEVEL="LOW"
+        else
+          RISK_LEVEL="SAFE"
+        fi
+
+        echo "risk_level=$RISK_LEVEL" >> "$GITHUB_OUTPUT"
+        echo "findings_count=$FINDINGS_COUNT" >> "$GITHUB_OUTPUT"
+
+        # Generate Job Summary
+        {
+          echo "## AgentShield Scan Report"
+          echo ""
+          echo "| Metric | Value |"
+          echo "|--------|-------|"
+          echo "| Path | \`${{ inputs.path }}\` |"
+          echo "| Files scanned | $SCANNED |"
+          echo "| Risk level | **$RISK_LEVEL** |"
+          echo "| Total findings | $FINDINGS_COUNT |"
+          echo ""
+          echo "### Summary"
+          echo ""
+          echo "| Risk | Count |"
+          echo "|------|-------|"
+          echo "| HIGH | $HIGH_COUNT |"
+          echo "| MEDIUM | $MEDIUM_COUNT |"
+          echo "| LOW | $LOW_COUNT |"
+          echo "| SAFE | $SAFE_COUNT |"
+        } >> "$GITHUB_STEP_SUMMARY"
+
+        # Add findings detail if any
+        if [ "$FINDINGS_COUNT" -gt 0 ]; then
+          {
+            echo ""
+            echo "### Findings"
+            echo ""
+            echo "| Severity | Category | File | Description |"
+            echo "|----------|----------|------|-------------|"
+            echo "$REPORT" | node -e "
+              const d = JSON.parse(require('fs').readFileSync('/dev/stdin','utf8'));
+              for (const f of d.findings.slice(0, 50)) {
+                const loc = f.line > 0 ? f.filePath + ':' + f.line : f.filePath;
+                const desc = f.description.replace(/\|/g, '\\\\|').slice(0, 80);
+                console.log('| ' + f.severity + ' | ' + f.category + ' | \`' + loc + '\` | ' + desc + ' |');
+              }
+              if (d.findings.length > 50) {
+                console.log('| ... | ... | ... | ' + (d.findings.length - 50) + ' more findings |');
+              }
+            "
+          } >> "$GITHUB_STEP_SUMMARY"
+        fi
+
+        # Determine exit code based on severity threshold
+        SEVERITY="${{ inputs.severity }}"
+        SHOULD_FAIL=0
+
+        case "$SEVERITY" in
+          HIGH)
+            [ "$HIGH_COUNT" -gt 0 ] && SHOULD_FAIL=1
+            ;;
+          MEDIUM)
+            [ "$HIGH_COUNT" -gt 0 ] || [ "$MEDIUM_COUNT" -gt 0 ] && SHOULD_FAIL=1
+            ;;
+          LOW)
+            [ "$HIGH_COUNT" -gt 0 ] || [ "$MEDIUM_COUNT" -gt 0 ] || [ "$LOW_COUNT" -gt 0 ] && SHOULD_FAIL=1
+            ;;
+        esac
+
+        if [ "$SHOULD_FAIL" -eq 1 ]; then
+          echo "::error::AgentShield detected $RISK_LEVEL risk threats ($FINDINGS_COUNT findings)"
+          exit 1
+        fi
