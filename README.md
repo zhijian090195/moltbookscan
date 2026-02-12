@@ -370,7 +370,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: zhijian090195/moltbotscan@main
+      - uses: example/moltbotscan@main
         with:
           path: '.'
           severity: 'HIGH'
@@ -409,7 +409,7 @@ jobs:
 
       - name: Scan for agent threats
         id: scan
-        uses: zhijian090195/moltbotscan@main
+        uses: example/moltbotscan@main
         with:
           path: './prompts'
           severity: 'MEDIUM'
@@ -961,7 +961,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: zhijian090195/moltbotscan@main
+      - uses: example/moltbotscan@main
         with:
           path: '.'
           severity: 'HIGH'
@@ -1000,7 +1000,7 @@ jobs:
 
       - name: Scan for agent threats
         id: scan
-        uses: zhijian090195/moltbotscan@main
+        uses: example/moltbotscan@main
         with:
           path: './prompts'
           severity: 'MEDIUM'
