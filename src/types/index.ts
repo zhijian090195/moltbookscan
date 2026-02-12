@@ -179,3 +179,34 @@ export const BASELINE = {
     'news', 'programming', 'science', 'gaming',
   ],
 } as const;
+
+// ─── File Scan Types ────────────────────────────────────────────
+
+export interface FileFinding {
+  filePath: string;
+  line: number;
+  severity: Severity;
+  category: InjectionCategory | 'suspicious_link' | 'base64_hidden';
+  description: string;
+  matchedText: string;
+  context: string;
+}
+
+export interface FileScanReport {
+  targetPath: string;
+  totalFiles: number;
+  scannedFiles: number;
+  findings: FileFinding[];
+  summary: { safe: number; low: number; medium: number; high: number };
+  riskFiles: { path: string; risk: RiskLevel; findingCount: number }[];
+  scannedAt: string;
+}
+
+export interface FileScanOptions {
+  verbose: boolean;
+  output: 'cli' | 'json' | 'html';
+  include?: string[];
+  exclude?: string[];
+  skipLLM: boolean;
+  recursive: boolean;
+}

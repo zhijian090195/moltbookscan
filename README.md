@@ -13,6 +13,7 @@ A lightweight TypeScript SDK that scans incoming messages and returns structured
 - **Framework-agnostic handler** — works with any Node.js server
 - **Zero required dependencies** — LLM analysis is opt-in via `ANTHROPIC_API_KEY`
 - **Full TypeScript support** — ships with declaration files
+- **Local file scanning** — `scan-files` command audits skill repos, prompt libraries, and codebases for threats
 
 ## Real-World Results
 
@@ -159,6 +160,62 @@ if (llm.isAvailable) {
 console.log(ALL_PATTERNS.length) // 16 rules
 ```
 
+### CLI: Scan Local Files
+
+Scan any directory or file for prompt injection, credential theft, and covert execution threats:
+
+```bash
+# Basic scan
+agentshield scan-files ./my-skills-repo
+
+# Verbose output with file:line references
+agentshield scan-files ./prompts -v
+
+# JSON output (for CI/CD pipelines)
+agentshield scan-files ./src --output json
+
+# Save HTML report
+agentshield scan-files ./agents --output html --save report.html
+
+# Filter by file type
+agentshield scan-files ./repo --include .md,.py,.yaml
+
+# Exclude directories
+agentshield scan-files ./project --exclude build,tmp
+```
+
+| Option | Description |
+|--------|-------------|
+| `-v, --verbose` | Show detailed findings with file:line references |
+| `-o, --output <format>` | Output format: `cli` (default), `json`, `html` |
+| `--include <exts>` | File extensions to include (comma-separated) |
+| `--exclude <dirs>` | Directory names to exclude (comma-separated) |
+| `--skip-llm` | Skip LLM deep analysis |
+| `--no-recursive` | Do not scan subdirectories |
+| `--save <file>` | Save report to file |
+
+Exit code `1` if any HIGH-risk files are found — useful for CI/CD gates.
+
+Default scanned extensions: `.md`, `.txt`, `.ts`, `.js`, `.py`, `.yaml`, `.yml`, `.json`, `.sh`
+
+### SDK: File Scanner
+
+```typescript
+import { FileScanner } from 'moltbot-scan'
+
+const scanner = new FileScanner()
+const report = await scanner.scan('./my-skills-repo', {
+  verbose: false,
+  output: 'cli',
+  skipLLM: true,
+  recursive: true,
+})
+
+console.log(report.summary)    // { safe: 12, low: 2, medium: 1, high: 0 }
+console.log(report.riskFiles)  // [{ path: 'skills/evil.md', risk: 'MEDIUM', findingCount: 3 }]
+console.log(report.findings)   // [{ filePath, line, severity, category, description, matchedText, context }]
+```
+
 ## API Reference
 
 ### `scan(content, options?): Promise<ScanResult>`
@@ -251,6 +308,7 @@ MIT
 - **框架無關處理器** — 適用於任何 Node.js 伺服器
 - **零必要依賴** — LLM 分析透過 `ANTHROPIC_API_KEY` 選擇性啟用
 - **完整 TypeScript 支援** — 附帶型別宣告檔
+- **本地檔案掃描** — `scan-files` 指令可審核技能倉庫、提示詞庫及程式碼庫中的威脅
 
 ## 真實數據驗證
 
@@ -395,6 +453,62 @@ if (llm.isAvailable) {
 
 // 存取所有偵測規則
 console.log(ALL_PATTERNS.length) // 16 條規則
+```
+
+### CLI：掃描本地檔案
+
+掃描任何目錄或檔案，偵測提示注入、憑證竊取及隱蔽執行威脅：
+
+```bash
+# 基本掃描
+agentshield scan-files ./my-skills-repo
+
+# 詳細輸出（含 file:line 參照）
+agentshield scan-files ./prompts -v
+
+# JSON 輸出（適用於 CI/CD 流水線）
+agentshield scan-files ./src --output json
+
+# 儲存 HTML 報告
+agentshield scan-files ./agents --output html --save report.html
+
+# 依檔案類型過濾
+agentshield scan-files ./repo --include .md,.py,.yaml
+
+# 排除目錄
+agentshield scan-files ./project --exclude build,tmp
+```
+
+| 選項 | 說明 |
+|------|------|
+| `-v, --verbose` | 顯示詳細發現，含 file:line 參照 |
+| `-o, --output <format>` | 輸出格式：`cli`（預設）、`json`、`html` |
+| `--include <exts>` | 要包含的副檔名（逗號分隔） |
+| `--exclude <dirs>` | 要排除的目錄名稱（逗號分隔） |
+| `--skip-llm` | 跳過 LLM 深度分析 |
+| `--no-recursive` | 不掃描子目錄 |
+| `--save <file>` | 將報告儲存至檔案 |
+
+若發現任何 HIGH 風險檔案，結束代碼為 `1` — 適用於 CI/CD 閘門。
+
+預設掃描副檔名：`.md`、`.txt`、`.ts`、`.js`、`.py`、`.yaml`、`.yml`、`.json`、`.sh`
+
+### SDK：檔案掃描器
+
+```typescript
+import { FileScanner } from 'moltbot-scan'
+
+const scanner = new FileScanner()
+const report = await scanner.scan('./my-skills-repo', {
+  verbose: false,
+  output: 'cli',
+  skipLLM: true,
+  recursive: true,
+})
+
+console.log(report.summary)    // { safe: 12, low: 2, medium: 1, high: 0 }
+console.log(report.riskFiles)  // [{ path: 'skills/evil.md', risk: 'MEDIUM', findingCount: 3 }]
+console.log(report.findings)   // [{ filePath, line, severity, category, description, matchedText, context }]
 ```
 
 ## API 參考

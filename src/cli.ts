@@ -3,7 +3,9 @@
 import { Command } from 'commander';
 import { Scanner } from './core/scanner.js';
 import { formatCLIReport, formatJSONReport, formatHTMLReport } from './core/reporter.js';
-import { writeFileSync } from 'fs';
+import { FileScanner } from './core/file-scanner.js';
+import { formatFileCLIReport, formatFileJSONReport, formatFileHTMLReport } from './core/file-reporter.js';
+import { writeFileSync, existsSync } from 'fs';
 
 const program = new Command();
 
@@ -57,6 +59,71 @@ program
 
       // Exit with non-zero code for untrusted agents (useful for CI/CD)
       if (report.level === 'UNTRUSTED') {
+        process.exit(1);
+      }
+    } catch (error) {
+      spinner.stop();
+      console.error(
+        `\x1b[31mError:\x1b[0m ${error instanceof Error ? error.message : 'Unknown error'}`
+      );
+      process.exit(2);
+    }
+  });
+
+program
+  .command('scan-files')
+  .description('Scan local files for prompt injection and agent threats')
+  .argument('<path>', 'File or directory to scan')
+  .option('-v, --verbose', 'Show detailed findings and score breakdown', false)
+  .option('-o, --output <format>', 'Output format: cli, json, html', 'cli')
+  .option('--include <globs>', 'File extensions to include (comma-separated, e.g. .md,.py)')
+  .option('--exclude <globs>', 'Directory names to exclude (comma-separated)')
+  .option('--skip-llm', 'Skip LLM deep analysis', false)
+  .option('--no-recursive', 'Do not scan subdirectories')
+  .option('--save <file>', 'Save report to file')
+  .action(async (targetPath: string, options) => {
+    if (!existsSync(targetPath)) {
+      console.error(`\x1b[31mError:\x1b[0m Path not found: ${targetPath}`);
+      process.exit(2);
+    }
+
+    const spinner = createSpinner(`Scanning files in ${targetPath}...`);
+    spinner.start();
+
+    try {
+      const scanner = new FileScanner();
+      const report = await scanner.scan(targetPath, {
+        verbose: options.verbose,
+        output: options.output,
+        include: options.include ? options.include.split(',').map((s: string) => s.trim()) : undefined,
+        exclude: options.exclude ? options.exclude.split(',').map((s: string) => s.trim()) : undefined,
+        skipLLM: options.skipLlm,
+        recursive: options.recursive !== false,
+      });
+
+      spinner.stop();
+
+      let output: string;
+      switch (options.output) {
+        case 'json':
+          output = formatFileJSONReport(report);
+          break;
+        case 'html':
+          output = formatFileHTMLReport(report);
+          break;
+        default:
+          output = formatFileCLIReport(report, options.verbose);
+      }
+
+      if (options.save) {
+        writeFileSync(options.save, output, 'utf-8');
+        console.log(`\nReport saved to ${options.save}`);
+      } else {
+        console.log(output);
+      }
+
+      // Exit code 1 if any HIGH risk files found (CI/CD integration)
+      if (report.summary.high > 0) {
         process.exit(1);
       }
     } catch (error) {

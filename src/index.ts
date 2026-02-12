@@ -19,6 +19,7 @@ export function scanSync(content: string): ScanResult {
 }
 
 export { ContentScanner } from './sdk/scanner.js';
+export { FileScanner } from './core/file-scanner.js';
 
 export type {
   ScanResult,
@@ -32,4 +33,7 @@ export type {
   Severity,
   RuleMatch,
   InjectionCategory,
+  FileFinding,
+  FileScanReport,
+  FileScanOptions,
 } from './types/index.js';
